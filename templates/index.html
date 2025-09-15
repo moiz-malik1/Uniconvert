@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniConvert - Video to Audio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <img src="{{ url_for('static', filename='logo.svg') }}" alt="UniConvert Logo" class="logo">
+  </header>
+
+  <main class="container">
+    <h1>Video → Audio Converter</h1>
+    <p>Upload your video and convert it into MP3, WAV, OGG, or AAC instantly.</p>
+
+    <div id="drop-area">
+      <p>Drag & Drop your video here</p>
+      <input type="file" id="fileElem" accept="video/*">
+      <label for="fileElem" class="btn">Choose File</label>
+    </div>
+
+    <!-- File Preview -->
+    <div id="file-preview" class="hidden"></div>
+
+    <!-- Format Selector -->
+    <div class="format-select">
+      <label for="format">Format:</label>
+      <select id="format">
+        {% for fmt in formats %}
+          <option value="{{ fmt }}">{{ fmt.upper() }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Progress Bar -->
+    <div id="progress-container" class="hidden">
+      <div id="progress-bar"></div>
+      <p id="progress-text">Processing...</p>
+    </div>
+
+    <!-- Download -->
+    <a id="download-link" class="hidden" href="#">Download</a>
+  </main>
+
+  <footer>
+    <p>© 2025 UniConvert. All rights reserved.</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
