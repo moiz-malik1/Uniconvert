@@ -1,73 +1,76 @@
 import os
 import uuid
-from flask import Flask, request, render_template, send_file, redirect, flash
+from flask import Flask, request, render_template, send_file, jsonify
 from moviepy.editor import VideoFileClip
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "secretkey"
+app.secret_key = "supersecretkey"
+
 UPLOAD_FOLDER = "uploads"
 CONVERTED_FOLDER = "converted"
 ALLOWED_EXTENSIONS = {"mp4", "avi", "mov", "mkv"}
+OUTPUT_FORMATS = {"mp3", "wav", "ogg", "aac"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["CONVERTED_FOLDER"] = CONVERTED_FOLDER
 
-# Make sure folders exist
+# Ensure folders exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CONVERTED_FOLDER, exist_ok=True)
 
+
 def allowed_file(filename):
-    """Check if uploaded file has allowed extension"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route("/", methods=["GET", "POST"])
+
+@app.route("/")
 def index():
-    if request.method == "POST":
-        file = request.files.get("file")
-        output_format = request.form.get("format", "mp3")
+    return render_template("index.html", formats=OUTPUT_FORMATS)
 
-        if not file or file.filename == "":
-            flash("No file uploaded")
-            return redirect(request.url)
 
-        if file and allowed_file(file.filename):
-            # 🔹 Use unique filenames to avoid overwriting
-            unique_id = str(uuid.uuid4())[:8]
-            filename = secure_filename(file.filename)
-            base_name, ext = os.path.splitext(filename)
-            unique_filename = f"{base_name}_{unique_id}{ext}"
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
-            file.save(filepath)
+@app.route("/convert", methods=["POST"])
+def convert_file():
+    if "file" not in request.files:
+        return jsonify({"error": "No file part"}), 400
 
-            try:
-                video = VideoFileClip(filepath)
+    file = request.files["file"]
+    output_format = request.form.get("format", "mp3")
 
-                if not video.audio:
-                    video.close()
-                    return "No audio stream found in this video", 400
+    if output_format not in OUTPUT_FORMATS:
+        return jsonify({"error": "Invalid format"}), 400
 
-                # 🔹 Unique output filename
-                output_filename = f"{base_name}_{unique_id}.{output_format}"
-                output_path = os.path.join(app.config["CONVERTED_FOLDER"], output_filename)
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
 
-                # Write audio file
-                if output_format == "mp3":
-                    video.audio.write_audiofile(output_path, codec="mp3")
-                else:
-                    video.audio.write_audiofile(output_path)
+    if file and allowed_file(file.filename):
+        file_id = str(uuid.uuid4())
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], f"{file_id}_{filename}")
+        file.save(filepath)
 
-                video.close()
+        try:
+            video = VideoFileClip(filepath)
+            output_filename = f"{file_id}.{output_format}"
+            output_path = os.path.join(app.config["CONVERTED_FOLDER"], output_filename)
 
-                return send_file(output_path, as_attachment=True)
+            # Conversion
+            video.audio.write_audiofile(
+                output_path,
+                codec="aac" if output_format == "aac" else None,
+                logger=None
+            )
+            video.close()
 
-            except Exception as e:
-                return f"Conversion error: {str(e)}", 500
+            os.remove(filepath)  # cleanup uploaded file
 
-        return "Invalid file format", 400
+            return send_file(output_path, as_attachment=True)
 
-    # Render homepage with available formats
-    return render_template("index.html", formats=["mp3", "wav", "ogg", "aac"])
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    return jsonify({"error": "Invalid file type"}), 400
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

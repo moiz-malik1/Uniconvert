@@ -1,0 +1,18 @@
+# Ignore virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore big video/audio test files
+*.mp4
+*.mp3
+*.avi
+*.mov
+
+# Ignore IDE settings
+.vscode/
+.idea/
